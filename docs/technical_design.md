@@ -220,6 +220,30 @@ Data handling	                                                pandas
 ML	                                                            scikit-learn
 Future AI	                                                   LLM APIs
 
+12.2 Confirmed Tool and API Selections
+LLM provider
+ - OpenAI Responses API
+ - Primary low-latency model: `gpt-5.4-mini`
+ - Complex-case reasoning model: `gpt-5.4`
+ - Embedding model: `text-embedding-3-large`
+
+Geo provider
+ - Google Maps Geocoding API for lat/long retrieval
+ - Google Address Validation API for future postal normalization
+
+Similarity infrastructure
+ - Week 1 local baseline: scikit-learn TF-IDF
+ - Production scale-up path: FAISS
+
+12.3 Environment Provisioning Status
+Repository now includes:
+ - dependency definition in `requirements.txt`
+ - local environment template in `.env.example`
+ - `Makefile` run/test targets
+ - `Dockerfile` for containerized execution
+ - GitHub Actions CI workflow in `.github/workflows/ci.yml`
+ - integration-ready provider adapters in `src/providers/`
+
 13. Limitations
  - no real-time LLM integration yet
  - no Geo API integration

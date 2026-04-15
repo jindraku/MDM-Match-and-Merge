@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
 from pathlib import Path
 
-from src.config import THRESHOLDS
 from src.embedding import generate_candidate_pairs
 from src.matcher import evaluate_candidate
 from src.preprocessing import RawRecord, preprocess_record
+from src.runtime import load_settings
 
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "sample_records.csv"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def load_records(path: Path) -> list[RawRecord]:
@@ -30,11 +31,30 @@ def load_records(path: Path) -> list[RawRecord]:
         ]
 
 
+def parse_args(default_input_path: Path, default_candidate_similarity: float) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the MDM match engine starter pipeline.")
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=default_input_path,
+        help="Path to the input CSV file.",
+    )
+    parser.add_argument(
+        "--candidate-threshold",
+        type=float,
+        default=default_candidate_similarity,
+        help="Cosine similarity threshold for candidate generation.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
-    raw_records = load_records(DATA_PATH)
+    settings = load_settings(PROJECT_ROOT)
+    args = parse_args(settings.input_path, settings.candidate_similarity)
+    raw_records = load_records(args.input)
     processed_records = [preprocess_record(record) for record in raw_records]
     records_by_id = {record.record_id: record for record in processed_records}
-    candidates = generate_candidate_pairs(processed_records, THRESHOLDS.candidate_similarity)
+    candidates = generate_candidate_pairs(processed_records, args.candidate_threshold)
 
     print("=== Candidate Pairs ===")
     for candidate in candidates:

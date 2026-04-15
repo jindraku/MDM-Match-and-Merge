@@ -30,7 +30,12 @@ This is a starter implementation of an MDM Match and Merge engine for multilingu
 - `src/matcher.py` - level pipeline and scoring
 - `src/main.py` - run the engine
 - `data/sample_records.csv` - sample data
+- `data/edge_case_records.csv` - edge case data for tuning
+- `data/known_matches.csv` - expected duplicate pairs
 - `docs/technical_design.md` - technical design
+- `docs/provider_selections.md` - selected APIs/tools and rationale
+- `docs/environment_setup.md` - local and CI environment setup
+- `docs/api_contracts.md` - pipeline input/output contracts
 - `docs/team_tasks.md` - team task breakdown
 - `requirements.txt` - dependencies
 
@@ -38,11 +43,18 @@ This is a starter implementation of an MDM Match and Merge engine for multilingu
 
 ```bash
 python3 -m venv .venv
-# Windows
-.venv\Scripts\activate
+source .venv/bin/activate
 
 pip install -r requirements.txt
+cp .env.example .env
 python3 -m src.main
+```
+
+You can also use:
+
+```bash
+make test
+make run
 ```
 
 ## Output
@@ -69,6 +81,9 @@ You can later replace TF-IDF with:
 - Deterministic translation/transliteration placeholders normalize accented and common multilingual tokens
 - Alternate company names are considered during Level 1 exact match checks
 - Candidate generation uses TF-IDF cosine similarity over the delimited record format
+- CI is scaffolded with GitHub Actions
+- Environment provisioning includes `.env.example`, `Makefile`, and `Dockerfile`
+- Provider selections are documented for OpenAI and Google Maps integrations
 - Final scoring combines:
   - exact match
   - embedding similarity
