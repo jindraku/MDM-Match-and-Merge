@@ -60,6 +60,7 @@ Output Layer
 4. Data Flow
  - Raw records are ingested
  - Each record is cleaned and normalized
+ - Language is detected and transliteration/placeholder translation is applied
  - Structured text is created
  - Embeddings are generated
  - Similarity search produces candidate pairs
@@ -86,6 +87,20 @@ Language detection (basic)
 Translation (LLM-based future)
  Example:
  - Sociedad Internacional → International Company
+
+5.2 Week 1 Implementation Scope
+Implemented in repository:
+ - lightweight language detection
+ - accent folding / transliteration
+ - deterministic placeholder translation for common multilingual tokens
+ - abbreviation expansion
+ - alternate-name normalization
+ - structured record text generation
+
+Deferred to later phases:
+ - true LLM translation
+ - transliteration for non-Latin scripts with model assistance
+ - country-specific address parsers
 
    
 6. Embedding Design
@@ -115,6 +130,7 @@ Example:
 Multi-Level Matching Pipeline
 Level 1 – Exact Match
    Compare cleaned company name and address
+   Also allow alternate company name to satisfy the name side of the exact match
 Example:
    abc company == abc company
    12 king street == 12 king street
@@ -172,6 +188,29 @@ Each match result contains:
   ]
 }
 
+11.1 Human-Readable Reasoning
+The Week 1 engine returns plain-language reasons such as:
+ - Level 1 exact match succeeded on normalized company name and address
+ - Embedding similarity contributed X/Y points
+ - City and country are an exact normalized match
+ - Multilingual preprocessing was applied through language detection and transliteration
+
+12.1 Repository Module Contracts
+`src/preprocessing.py`
+ - input: raw CSV record
+ - output: processed record with normalized fields and structured text
+
+`src/embedding.py`
+ - input: processed records
+ - output: TF-IDF vectors and candidate record pairs above threshold p
+
+`src/matcher.py`
+ - input: candidate pair + processed record map
+ - output: score, classification, exact-match flag, and reasoning
+
+`src/main.py`
+ - orchestrates CSV load → preprocessing → candidate generation → scoring output
+
 12. Technology Stack
 Component	                                                Technology
 Language                                                      	Python
@@ -184,8 +223,9 @@ Future AI	                                                   LLM APIs
 13. Limitations
  - no real-time LLM integration yet
  - no Geo API integration
- - limited translation capability
- - small dataset
+ - translation is heuristic and intentionally lightweight
+ - no fuzzy legal-entity hierarchy handling yet
+ - sample dataset is small and local-only
 
    
 14. Future Enhancements

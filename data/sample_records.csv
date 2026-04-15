@@ -1,0 +1,11 @@
+record_id,company_name,address,city,country,alternate_name
+1,ABC Co.,12 King St.,London,UK,ABC Company
+2,ABC Company,12 King Street,London,UK,
+3,Sociedad Internacional,45 Calle Mayor,Madrid,Spain,International Company
+4,International Company,45 Calle Mayor,Madrid,Spain,
+5,Globex Mfg Ltd,500 Elm Rd,Chicago,USA,Globex Manufacturing Limited
+6,Globex Manufacturing Limited,500 Elm Road,Chicago,USA,
+7,Honeywell Industrial Systems,715 Peachtree Ave,Atlanta,USA,Honeywell Ind Systems
+8,Honeywell Ind. Systems,719 Peachtree Avenue,Atlanta,USA,
+9,Compagnie Energie,18 Rue Victor Hugo,Paris,France,Energy Company
+10,Energy Company,18 Rue Victor Hugo,Paris,France,

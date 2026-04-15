@@ -37,12 +37,12 @@ This is a starter implementation of an MDM Match and Merge engine for multilingu
 ## Setup
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 # Windows
 .venv\Scripts\activate
 
 pip install -r requirements.txt
-python -m src.main
+python3 -m src.main
 ```
 
 ## Output
@@ -62,6 +62,18 @@ You can later replace TF-IDF with:
 - sentence-transformers
 - OpenAI embeddings
 - FAISS / Pinecone / Chroma
+
+## Current Week 1 implementation details
+
+- Lightweight language detection identifies English vs mixed/non-English text
+- Deterministic translation/transliteration placeholders normalize accented and common multilingual tokens
+- Alternate company names are considered during Level 1 exact match checks
+- Candidate generation uses TF-IDF cosine similarity over the delimited record format
+- Final scoring combines:
+  - exact match
+  - embedding similarity
+  - city/country match
+  - address token overlap
 
 ## Suggested Week 1 scope
 
