@@ -9,6 +9,7 @@ from pathlib import Path
 from src.embedding import generate_candidate_pairs
 from src.matcher import evaluate_candidate
 from src.preprocessing import RawRecord, preprocess_record
+from src.providers.groq_provider import GroqProvider, GroqProviderConfig
 from src.runtime import load_settings
 
 
@@ -52,7 +53,17 @@ def main() -> None:
     settings = load_settings(PROJECT_ROOT)
     args = parse_args(settings.input_path, settings.candidate_similarity)
     raw_records = load_records(args.input)
-    processed_records = [preprocess_record(record) for record in raw_records]
+    provider = None
+    if settings.groq_api_key:
+        provider = GroqProvider(
+            GroqProviderConfig(
+                api_key=settings.groq_api_key,
+                translation_model=settings.groq_translation_model,
+                reasoning_model=settings.groq_reasoning_model,
+                abbreviation_model=settings.groq_abbreviation_model,
+            )
+        )
+    processed_records = [preprocess_record(record, settings=settings, provider=provider) for record in raw_records]
     records_by_id = {record.record_id: record for record in processed_records}
     candidates = generate_candidate_pairs(processed_records, args.candidate_threshold)
 

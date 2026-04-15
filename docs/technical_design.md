@@ -56,6 +56,29 @@ Scoring Engine
 Output Layer
  - match classification + reasoning
 
+3.2 Architecture Diagram
+
+```mermaid
+flowchart LR
+    A["MDM source table / CSV"] --> B["Profiling stage<br/>schema, language mix, duplicate rate"]
+    B --> C["Preprocessing<br/>cleanup, language detection, Groq translation, abbreviation expansion"]
+    C --> D["Structured text builder<br/>company || address || city || country"]
+    D --> E["Embedding and candidate selection<br/>TF-IDF now, FAISS later"]
+    E --> F["Level 1 exact match"]
+    F --> G["Level 2 geo-distance (future)"]
+    G --> H["Level 3 name verification with Groq (future scoring hook)"]
+    H --> I["Level 4 address analysis"]
+    I --> J["Level 5 score aggregation"]
+    J --> K["Classification + reasoning output"]
+```
+
+3.3 Agent Orchestration Plan
+ - Profiling agent: analyzes incoming datasets and produces schema, language distribution, and duplicate-rate reports.
+ - Preprocessing agent: detects language per field, performs cleanup, and optionally calls Groq for translation and abbreviation expansion.
+ - Candidate generation agent: creates record embeddings and reduces pair count using similarity threshold `p`.
+ - Matching agent: runs Level 1 exact match today and will own Levels 2-5 as integrations are added.
+ - Review agent: surfaces human-readable reasoning and routes borderline pairs for business review.
+
    
 4. Data Flow
  - Raw records are ingested
@@ -90,15 +113,15 @@ Translation (LLM-based future)
 
 5.2 Week 1 Implementation Scope
 Implemented in repository:
- - lightweight language detection
+ - field-level language detection
  - accent folding / transliteration
- - deterministic placeholder translation for common multilingual tokens
- - abbreviation expansion
+ - Groq-backed translation and abbreviation expansion behind environment flags
+ - deterministic placeholder translation for offline fallback
+ - rule-based abbreviation expansion plus optional Groq expansion
  - alternate-name normalization
- - structured record text generation
+  - structured record text generation
 
 Deferred to later phases:
- - true LLM translation
  - transliteration for non-Latin scripts with model assistance
  - country-specific address parsers
 
@@ -112,7 +135,7 @@ Current:
  - TF-IDF vectorization
 Future:
  - Sentence Transformers
- - OpenAI embeddings
+ - model-based embeddings if production retrieval quality needs exceed TF-IDF
 
    
 7. Candidate Selection
@@ -222,10 +245,10 @@ Future AI	                                                   LLM APIs
 
 12.2 Confirmed Tool and API Selections
 LLM provider
- - OpenAI Responses API
- - Primary low-latency model: `gpt-5.4-mini`
- - Complex-case reasoning model: `gpt-5.4`
- - Embedding model: `text-embedding-3-large`
+ - Groq Chat Completions API
+ - Translation model: `llama-3.3-70b-versatile`
+ - Complex-case reasoning model: `llama-3.3-70b-versatile`
+ - Abbreviation expansion model: `llama-3.3-70b-versatile`
 
 Geo provider
  - Google Maps Geocoding API for lat/long retrieval
@@ -245,15 +268,14 @@ Repository now includes:
  - integration-ready provider adapters in `src/providers/`
 
 13. Limitations
- - no real-time LLM integration yet
  - no Geo API integration
- - translation is heuristic and intentionally lightweight
+ - Groq integration requires API key and is disabled by default
+ - offline translation fallback is heuristic and intentionally lightweight
  - no fuzzy legal-entity hierarchy handling yet
  - sample dataset is small and local-only
 
    
 14. Future Enhancements
- - integrate OpenAI / LLM APIs
  - add address geocoding
  - use FAISS or vector DB
  - scale to large datasets

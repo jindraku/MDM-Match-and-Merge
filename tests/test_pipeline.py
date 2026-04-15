@@ -5,6 +5,7 @@ import unittest
 from src.config import THRESHOLDS
 from src.embedding import generate_candidate_pairs
 from src.matcher import classify, evaluate_candidate
+from src.profiling import build_profile
 from src.preprocessing import RawRecord, normalize_text, preprocess_record
 
 
@@ -23,6 +24,19 @@ class PipelineTests(unittest.TestCase):
         processed = preprocess_record(record)
         self.assertEqual(processed.normalized_company_name, "company international")
         self.assertEqual(processed.normalized_address, "45 street mayor")
+        self.assertEqual(processed.company_language, "possible_non_english")
+        self.assertEqual(processed.address_language, "possible_non_english")
+
+    def test_profile_report_captures_duplicate_rate(self) -> None:
+        records = [
+            RawRecord("1", "ABC Co.", "12 King St.", "London", "UK", "ABC Company"),
+            RawRecord("2", "ABC Company", "12 King Street", "London", "UK", ""),
+            RawRecord("3", "Unique Corp", "9 Market Rd", "Leeds", "UK", ""),
+        ]
+        report = build_profile(records)
+        self.assertEqual(report.record_count, 3)
+        self.assertEqual(report.exact_duplicate_pairs, 1)
+        self.assertGreater(report.duplicate_rate, 0)
 
     def test_candidate_generation_finds_obvious_duplicate(self) -> None:
         records = [

@@ -20,9 +20,15 @@
 ```json
 {
   "record_id": "123",
+  "company_language": "english",
+  "address_language": "english",
+  "city_language": "english",
+  "country_language": "english",
   "language": "english",
-  "translated_company_name": "ABC Co.",
-  "translated_address": "12 King St.",
+  "translated_company_name": "ABC Company",
+  "translated_address": "12 King Street",
+  "translated_city": "London",
+  "translated_country": "UK",
   "normalized_company_name": "abc company",
   "normalized_alternate_name": "abc company",
   "normalized_address": "12 king street",
@@ -61,7 +67,7 @@
 
 ## Future external service contracts
 
-### OpenAI translation and reasoning request
+### Groq translation and reasoning request
 - Input: normalized company and address context
 - Output: translated text, explanation, or semantic equivalence decision
 - Planned use: Levels 3 and 5

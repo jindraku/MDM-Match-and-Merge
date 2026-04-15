@@ -10,3 +10,6 @@ run:
 
 test:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -s tests -v
+
+profile:
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m src.profiling

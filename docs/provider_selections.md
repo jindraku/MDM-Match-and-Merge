@@ -1,25 +1,24 @@
 # Provider Selections
 
-Last reviewed: 2026-04-14
+Last reviewed: 2026-04-15
 
 ## Confirmed Week 1 selections
 
 ### LLM provider
-- Selected provider: OpenAI
-- API surface: Responses API
-- Primary operational model: `gpt-5.4-mini`
-- Escalation model for complex ambiguous pairs: `gpt-5.4`
-- Embedding model: `text-embedding-3-large`
+- Selected provider: Groq
+- API surface: Groq Chat Completions API via the official `groq` Python SDK
+- Translation model: `llama-3.3-70b-versatile`
+- Name verification model: `llama-3.3-70b-versatile`
+- Abbreviation expansion model: `llama-3.3-70b-versatile`
 
 Rationale:
-- OpenAI’s current model guidance recommends starting with `gpt-5.4` for complex reasoning and `gpt-5.4-mini` for lower-latency, lower-cost workloads.
-- `text-embedding-3-large` is documented as OpenAI’s most capable embedding model for both English and non-English tasks, which fits the multilingual MDM requirement.
-- The Responses API gives a single interface for structured generation, reasoning, and future tool calling during Levels 3-5.
+- Groq provides a supported Python SDK and low-latency chat completion flow that fits translation, abbreviation expansion, and semantic verification subtasks.
+- `llama-3.3-70b-versatile` is positioned in Groq’s official docs as a general-purpose instruction-following model, which is a strong fit for structured normalization prompts.
+- The SDK integration is straightforward for a Week 1 starter and can be feature-flagged behind environment variables.
 
 Official sources:
-- OpenAI model selection: https://developers.openai.com/api/docs/models
-- OpenAI Responses API: https://platform.openai.com/docs/api-reference/responses/retrieve
-- OpenAI `text-embedding-3-large`: https://developers.openai.com/api/docs/models/text-embedding-3-large
+- Groq Python SDK: https://github.com/groq/groq-python
+- Groq model docs for `llama-3.3-70b-versatile`: https://console.groq.com/docs/model/llama-3.3-70b-versatile
 
 ### Geo and address provider
 - Selected provider: Google Maps Platform
@@ -51,9 +50,9 @@ Official sources:
 
 | Need | Selected tool | Why |
 |---|---|---|
-| Translation and reasoning | OpenAI Responses API + `gpt-5.4-mini` | Fast, lower-cost model for structured matching subtasks |
-| Ambiguous-case review | `gpt-5.4` | Higher reasoning headroom for borderline match decisions |
-| Multilingual embeddings | `text-embedding-3-large` | Strong multilingual embedding support |
+| Translation and reasoning | Groq SDK + `llama-3.3-70b-versatile` | Low-latency general-purpose instruction model for matching subtasks |
+| Ambiguous-case review | `llama-3.3-70b-versatile` | Reused for semantic name equivalence in the starter |
+| Multilingual embeddings | TF-IDF in Week 1, with FAISS-ready scale path | Keeps the starter local and reproducible |
 | Geo-distance | Google Geocoding API | Produces lat/long for Level 2 |
 | Address validation | Google Address Validation API | Supports future postal normalization and metadata |
 | Week 1 local similarity | TF-IDF | Simple, reproducible baseline |

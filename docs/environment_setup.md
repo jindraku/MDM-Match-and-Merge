@@ -8,6 +8,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 make test
+make profile
 make run
 ```
 
@@ -15,7 +16,7 @@ make run
 
 `.env.example` includes:
 - dataset path and candidate threshold
-- OpenAI model and API key placeholders
+- Groq model, feature flags, and API key placeholders
 - Google Maps API key placeholders
 
 ## Provisioned assets included in this repository
