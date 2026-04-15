@@ -1,4 +1,4 @@
-# MDM Match Engine - Undergraduate Group Starter Project
+# MDM Match Engine
 
 This is a starter implementation of an MDM Match and Merge engine for multilingual, address-aware customer matching.
 
