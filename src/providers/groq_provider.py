@@ -74,3 +74,46 @@ class GroqProvider:
             ),
             user_prompt=f"Name A: {left_name}\nName B: {right_name}",
         )
+
+    def verify_name_equivalence_structured(self, left_name: str, right_name: str) -> dict:
+        response = self._single_turn(
+            model=self.config.reasoning_model,
+            system_prompt=(
+                "You compare company names for enterprise MDM duplicate detection. "
+                "Return strict JSON only with keys: status, relationship, score, reason. "
+                "Allowed status values are: "
+                "exact_business_match, likely_match, parent_subsidiary_related, "
+                "trade_name_related, no_name_match. "
+                "The score must be an integer from 0 to 40."
+            ),
+            user_prompt=f"Name A: {left_name}\nName B: {right_name}",
+        )
+        parsed = json.loads(response)
+        return {
+            "status": parsed.get("status", "no_name_match"),
+            "relationship": parsed.get("relationship", "unknown"),
+            "score": int(parsed.get("score", 0)),
+            "reason": parsed.get("reason", ""),
+        }
+
+    def analyze_address_pair_structured(self, left_address: str, right_address: str) -> dict:
+        response = self._single_turn(
+            model=self.config.reasoning_model,
+            system_prompt=(
+                "You compare addresses for enterprise MDM duplicate detection. "
+                "Return strict JSON only with keys: status, issues, score, reason. "
+                "Allowed status values are: "
+                "same_address, near_equivalent_address, same_building_different_unit, "
+                "conflicting_address, insufficient_address_data. "
+                "The issues field must be a JSON array of strings. "
+                "The score must be an integer from 0 to 25."
+            ),
+            user_prompt=f"Address A: {left_address}\nAddress B: {right_address}",
+        )
+        parsed = json.loads(response)
+        return {
+            "status": parsed.get("status", "insufficient_address_data"),
+            "issues": parsed.get("issues", []),
+            "score": int(parsed.get("score", 0)),
+            "reason": parsed.get("reason", ""),
+        }
