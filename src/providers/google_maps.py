@@ -44,3 +44,47 @@ class GoogleMapsProvider:
         )
         with urlopen(request) as response:
             return json.loads(response.read().decode("utf-8"))
+
+    def geocode_to_lat_lng(self, address: str) -> tuple[float, float] | None:
+        """Convert an address into a latitude/longitude tuple."""
+        try:
+            response = self.geocode_address(address)
+            results = response.get("results", [])
+            if not results:
+                return None
+
+            location = results[0].get("geometry", {}).get("location", {})
+            lat = location.get("lat")
+            lng = location.get("lng")
+
+            if lat is None or lng is None:
+                return None
+
+            return float(lat), float(lng)
+
+        except Exception:
+            return None
+
+    def get_distance_miles(
+        self,
+        coord_a: tuple[float, float],
+        coord_b: tuple[float, float],
+    ) -> float:
+        """Compute distance in miles between two coordinates using Haversine."""
+        from math import atan2, cos, radians, sin, sqrt
+
+        lat1, lon1 = coord_a
+        lat2, lon2 = coord_b
+
+        earth_radius_miles = 3958.8
+
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+
+        a = (
+            sin(dlat / 2) ** 2
+            + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+        )
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return earth_radius_miles * c
