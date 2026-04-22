@@ -8,6 +8,8 @@ from src.config import SCORING, THRESHOLDS
 from src.embedding import CandidatePair
 from src.preprocessing import ProcessedRecord
 
+from src.orchestrator import evaluate_candidate_week2
+
 
 @dataclass(frozen=True)
 class MatchResult:
