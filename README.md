@@ -1,314 +1,104 @@
 # MDM Match and Merge Engine
 
-## Problem Statement
+This project now runs against the real five-table Honeywell-style MDM dataset in [`MDM- Match and Merge data/`](/Users/joshikaindrakumar/Documents/GitHub/MDM-Match-and-Merge/MDM-%20Match%20and%20Merge%20data) and assembles a golden record for each `PARTY_ID`.
 
-Honeywell's existing Master Data Management (MDM) system lacks multilingual normalization, reasoning-based matching, and address-aware validation. This leads to inconsistent and duplicate Customer Master records, reducing data quality, operational efficiency, and decision-making accuracy.
+## What it does now
 
----
+The current pipeline:
 
-## Project Overview
+1. loads the five-table MDM schema
+2. groups records by `PARTY_ID`
+3. scores name variants from `individual`
+4. scores phone variants from `electronic_address`
+5. scores address variants from `party_postal_address`
+6. selects the top-ranked variant from each track
+7. writes a golden record table with reasoning
 
-This project builds an **enterprise-grade MDM Match and Merge Engine** that identifies duplicate Customer Master records using:
+## Source schema
 
-* multilingual normalization
-* LLM-based reasoning
-* address-aware validation
-* embedding-based candidate generation
+The project uses these tables:
 
-The system compares company records, assigns a **confidence score (0–100)**, and classifies each pair as:
+- `party.csv`
+- `individual.csv`
+- `electronic_address.csv`
+- `party_address.csv`
+- `party_postal_address.csv`
 
-* **High Confidence Match (>85)**
-* **Potential Match (60–85)**
-* **Non-Match (<60)**
+The `party_address -> party_postal_address` relationship is joined through `PARTY_POSTAL_ADDR_ID`, and all outputs are grouped by `PARTY_ID`.
 
-Each decision includes **human-readable reasoning**.
+## Scoring tracks
 
----
+### Name quality scorer
 
-## Goal
+- compares `FIRST_NAME + MIDDLE_NAME + LAST_NAME` against `PARTY_NAME`
+- uses Groq when configured
+- falls back to rule-based normalization, token overlap, and string similarity
 
-Develop a **multi-level matching pipeline**:
+### Phone quality scorer
 
-```
-Preprocessing → Candidate Selection → Multi-Level Matching → Scoring → Classification → Reasoning
-```
+- uses `phonenumbers` when available
+- checks parseability, validity, country code, and plausible digit length
+- falls back to rule-based scoring if parsing fails
 
-The system avoids brute-force comparisons and supports scalable, intelligent matching across multilingual datasets.
+### Address quality scorer
 
----
+- is wired for Azure Maps geocoding quality checks
+- uses address completeness and source flags as fallback scoring when the API is unavailable
+- ranks each address variant per `PARTY_ID`
 
-## Pipeline Architecture
+## Outputs
 
-### 1. Preprocessing Layer
+### Golden records
 
-* Language detection (field-level)
-* Translation (LLM + fallback)
-* Transliteration
-* Lowercasing and whitespace normalization
-* Punctuation and article removal
-* Abbreviation expansion
+The main pipeline writes:
 
----
+- [`outputs/golden_records.csv`](/Users/joshikaindrakumar/Documents/GitHub/MDM-Match-and-Merge/outputs/golden_records.csv)
 
-### 2. Candidate Generation Layer
+Each row contains:
 
-* Structured record format:
+- `party_id`
+- `party_name`
+- `best_individual_id`
+- `best_phone_id`
+- `best_address_id`
+- plain-English reasoning for each selected track
 
-  ```
-  company: {name} || address: {address} || city: {city} || country: {country}
-  ```
-* TF-IDF embeddings
-* Cosine similarity
-* Threshold-based filtering (`p`)
-* Reduces O(N²) comparisons
+### Data profile
 
----
+The profiling command writes:
 
-### 3. Multi-Level Matching Engine
+- [`docs/data_profile.md`](/Users/joshikaindrakumar/Documents/GitHub/MDM-Match-and-Merge/docs/data_profile.md)
 
-#### Level 1 — Exact Match
+It summarizes:
 
-* Exact match on cleaned company name + address
+- row counts by table
+- schema fields
+- variant distribution per `PARTY_ID`
+- approximate duplicate-group rate
+- quality issues in the MDM data
 
----
+## Project structure
 
-#### Level 2 — Geo Distance Agent
-
-* Uses Google Maps API
-* Rules:
-
-  * Same name + distance < 2 miles → strong match
-  * Same name + distance > 25 miles → same company, different office
-
----
-
-#### Level 3 — Company Name Verification Agent
-
-LLM-based reasoning for:
-
-* typos
-* abbreviations
-* alternate names
-* trade names
-* multilingual variations
-* transliteration
-* parent-subsidiary relationships
-
-**Examples:**
-
-* Boieng → Boeing
-* IBM → International Business Machines
-* Alphabet ↔ Google
-
----
-
-#### Level 4 — Address Deep Analysis Agent
-
-Checks:
-
-* zip code mismatches
-* street spelling differences
-* directional variations (N vs North)
-* street types (St vs Street)
-* suite/unit differences
-* city/state mismatches
-* formatting inconsistencies
-
----
-
-#### Level 5 — Final Score Computation
-
-* Aggregates signals from Levels 1–4
-* Produces final confidence score (0–100)
-
----
-
-## Multi-Agent Orchestration Flow
-
-1. Receive candidate pair from embedding stage
-2. Run Company Name Verification Agent
-3. Run Geo Distance Agent
-4. Run Address Analysis Agent
-5. Aggregate signals
-6. Compute final score
-7. Classify result
-8. Generate reasoning
-
----
-
-## Scoring Mechanism
-
-### Weights
-
-* Embedding similarity: 0–10
-* Level 1 Exact Match: 0–15
-* Level 2 Geo Distance: 0–10
-* Level 3 Name Verification: 0–40
-* Level 4 Address Analysis: 0–25
-
-### Penalties
-
-* Name conflict: −30
-* Address conflict: −20
-* Same company, different office: −10
-
----
-
-## Classification
-
-* **High Confidence Match:** >85
-* **Potential Match:** 60–85
-* **Non-Match:** <60
-
----
-
-## Business Rules
-
-* Same company but different office is **not automatically a duplicate**
-* Parent-subsidiary relationships are identified but **not merged automatically**
-* Strong name mismatch overrides address similarity
-* Minor address variations do not block matches if name evidence is strong
-
----
-
-## Input and Output
-
-### Input
-
-* Record A (company + address)
-* Record B (company + address)
-* Embedding similarity score
-* Level 1 exact match result
-
-### Output
-
-* Confidence score (0–100)
-* Classification
-* Agent-level evidence
-* Human-readable reasoning
-
----
-
-## Example Scenarios
-
-1. **Boieng vs Boeing (same address)**
-   → High Confidence Match
-
-2. **Google CA vs Google NY**
-   → Same company, different office
-
-3. **Same company, zip typo**
-   → Potential Match
-
-4. **Alphabet vs Google**
-   → Related entity (not duplicate)
-
-5. **Delta Plumbing vs Delta Airlines**
-   → Non-Match
-
----
-
-## Project Structure
-
-```
+```text
 src/
-  config.py
-  runtime.py
-  preprocessing.py
-  embedding.py
-  matcher.py
-  scoring.py
-  orchestrator.py
-  profiling.py
   main.py
+  mdm_loader.py
+  golden_record.py
+  profiling.py
+  preprocessing.py
   providers/
     groq_provider.py
-    google_maps.py
+    azure_maps.py
+  scoring/
+    address_scorer.py
+    name_scorer.py
+    phone_scorer.py
 
-data/
+MDM- Match and Merge data/
 docs/
 tests/
 requirements.txt
 ```
-
----
-
-## Technologies Used
-
-* **LLM Provider:** Groq
-* **Geo API:** Google Maps Platform
-* **Embeddings:** TF-IDF (baseline)
-* **Future Scale:** FAISS / vector DB
-* **Language Detection:** rule-based + libraries
-
----
-
-## Week-wise Implementation
-
-### Week 1 — Preprocessing & Candidate Generation
-
-* Data profiling
-* Multilingual preprocessing
-* Embedding generation
-* Candidate pair selection
-* Level 1 exact match
-
----
-
-### Week 2 — Multi-Agent Matching Engine
-
-* Geo-distance agent
-* Company name verification agent (LLM)
-* Address deep analysis agent
-* Multi-agent orchestration
-
----
-
-### Week 3 — Scoring & Integration
-
-* Final score computation
-* Classification logic
-* Reasoning generation
-* End-to-end validation
-* Performance tuning
-
----
-
-## Current Status
-
-* Preprocessing pipeline implemented
-* Candidate generation using TF-IDF
-* Level 1 exact match complete
-* Multi-agent design completed
-* LLM and Geo integrations scaffolded
-* Scoring and classification logic defined
-
----
-
-## Known Limitations
-
-* CSV-based input (no live MDM connector yet)
-* Geo API not fully integrated into scoring
-* LLM reasoning partially implemented
-* TF-IDF not suitable for large-scale production
-* Parent-subsidiary logic needs business rules
-
----
-
-## Deliverable
-
-A complete MDM Match Engine that performs:
-
-* preprocessing
-* candidate generation
-* multi-level matching
-* scoring
-* classification
-* reasoning
-
-and produces validated duplicate detection results across multilingual datasets.
-
----
 
 ## Setup
 
@@ -316,20 +106,66 @@ and produces validated duplicate detection results across multilingual datasets.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
 ```
 
----
+## Test and run
 
-## Run
+Run the test suite:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Generate the MDM data profile:
+
+```bash
+python3 -m src.profiling
+```
+
+Assemble golden records:
 
 ```bash
 python3 -m src.main
 ```
 
----
-
-## Testing
+Or use the Make targets:
 
 ```bash
-pytest
+make test
+make profile
+make run
 ```
+
+## What to expect
+
+`python3 -m src.profiling`:
+
+- reads the five CSV tables in [`MDM- Match and Merge data/`](/Users/joshikaindrakumar/Documents/GitHub/MDM-Match-and-Merge/MDM-%20Match%20and%20Merge%20data)
+- prints a summary in the terminal
+- updates [docs/data_profile.md](/Users/joshikaindrakumar/Documents/GitHub/MDM-Match-and-Merge/docs/data_profile.md)
+
+`python3 -m src.main`:
+
+- loads the same five-table MDM dataset
+- ranks individual, phone, and address variants per `PARTY_ID`
+- writes the final golden record output to [outputs/golden_records.csv](/Users/joshikaindrakumar/Documents/GitHub/MDM-Match-and-Merge/outputs/golden_records.csv)
+
+## Environment variables
+
+The runtime now expects:
+
+- `MDM_DATA_DIR`
+- `MDM_PROFILE_OUTPUT_PATH`
+- `MDM_GOLDEN_RECORD_OUTPUT_PATH`
+- `GROQ_API_KEY`
+- `AZURE_MAPS_API_KEY`
+
+Groq and Azure Maps are optional at runtime. If keys are missing or calls fail, the scorers fall back gracefully to rule-based logic.
+
+## Current limitations
+
+- Azure Maps scoring is integration-ready but not live-tested here because no API key is configured in this workspace
+- Groq name scoring is integration-ready but also depends on a valid API key
+- `individual` and address variants do not have native row-level primary keys in the source data, so synthetic IDs are generated for ranking outputs
+- pairwise duplicate matching still exists in older modules, but the primary runnable flow is now golden-record assembly on the real MDM schema

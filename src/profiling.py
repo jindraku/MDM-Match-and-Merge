@@ -1,15 +1,16 @@
-"""Dataset profiling for MDM source analysis."""
+"""Dataset profiling for the 5-table MDM source schema."""
 
 from __future__ import annotations
 
 import argparse
-import csv
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+import pandas as pd
+
+from src.mdm_loader import load_party_groups
 from src.runtime import load_settings
-from src.preprocessing import RawRecord, preprocess_record
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -17,94 +18,81 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 @dataclass(frozen=True)
 class ProfileReport:
-    record_count: int
-    fields: list[str]
-    language_distribution: dict[str, int]
-    company_language_distribution: dict[str, int]
-    address_language_distribution: dict[str, int]
+    party_count: int
+    table_row_counts: dict[str, int]
+    schema_fields: dict[str, list[str]]
+    name_variant_distribution: dict[int, int]
+    phone_variant_distribution: dict[int, int]
+    address_variant_distribution: dict[int, int]
     duplicate_rate: float
-    exact_duplicate_pairs: int
-    missing_value_counts: dict[str, int]
+    exact_duplicate_groups: int
     quality_issues: list[str]
 
 
-def load_records(path: Path) -> list[RawRecord]:
-    with path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        return [
-            RawRecord(
-                record_id=row["record_id"],
-                company_name=row["company_name"],
-                address=row["address"],
-                city=row["city"],
-                country=row["country"],
-                alternate_name=row.get("alternate_name", ""),
-            )
-            for row in reader
-        ]
+def build_profile(base_path: Path) -> ProfileReport:
+    groups = load_party_groups(base_path)
+    table_names = [
+        "party",
+        "individual",
+        "electronic_address",
+        "party_address",
+        "party_postal_address",
+    ]
+    frames = {name: pd.read_csv(base_path / f"{name}.csv", dtype=str).fillna("") for name in table_names}
+    schema_fields = {name: list(frame.columns) for name, frame in frames.items()}
+    table_row_counts = {name: len(frame) for name, frame in frames.items()}
+    name_variant_distribution = Counter(len(group.individuals) for group in groups)
+    phone_variant_distribution = Counter(len(group.phones) for group in groups)
+    address_variant_distribution = Counter(len(group.addresses) for group in groups)
 
-
-def build_profile(records: list[RawRecord]) -> ProfileReport:
-    processed = [preprocess_record(record) for record in records]
-    fields = list(RawRecord.__dataclass_fields__.keys())
-    language_distribution = Counter(item.language for item in processed)
-    company_language_distribution = Counter(item.company_language for item in processed)
-    address_language_distribution = Counter(item.address_language for item in processed)
-    missing_value_counts = {
-        "company_name": sum(1 for record in records if not record.company_name.strip()),
-        "address": sum(1 for record in records if not record.address.strip()),
-        "city": sum(1 for record in records if not record.city.strip()),
-        "country": sum(1 for record in records if not record.country.strip()),
-        "alternate_name": sum(1 for record in records if not record.alternate_name.strip()),
-    }
-
-    seen: dict[tuple[str, str], str] = {}
-    duplicate_pairs = 0
-    non_ascii_records = 0
-    alternate_name_usage = 0
-    near_address_variants = 0
-    for item in processed:
-        key = (item.normalized_company_name, item.normalized_address)
-        if key in seen:
-            duplicate_pairs += 1
-        else:
-            seen[key] = item.record_id
-        if item.language != "english":
-            non_ascii_records += 1
-        if item.normalized_alternate_name:
-            alternate_name_usage += 1
-        if any(token in item.raw_address.lower() for token in ("st.", "rd", "ave", "blvd")):
-            near_address_variants += 1
-
+    exact_duplicate_groups = 0
     quality_issues: list[str] = []
-    if non_ascii_records:
+    groups_with_name_variants = sum(1 for group in groups if len(group.individuals) > 1)
+    groups_with_phone_variants = sum(1 for group in groups if len(group.phones) > 1)
+    groups_with_address_variants = sum(1 for group in groups if len(group.addresses) > 1)
+    if groups_with_name_variants:
         quality_issues.append(
-            f"{non_ascii_records} record(s) contain multilingual or mixed-language content that need normalization."
+            f"{groups_with_name_variants} party groups contain multiple individual-name variants."
         )
-    if duplicate_pairs:
+    if groups_with_phone_variants:
         quality_issues.append(
-            f"{duplicate_pairs} exact duplicate pair(s) were found after normalization of company name and address."
+            f"{groups_with_phone_variants} party groups contain multiple phone variants."
         )
-    if alternate_name_usage:
+    if groups_with_address_variants:
         quality_issues.append(
-            f"{alternate_name_usage} record(s) use alternate names, indicating trade-name or alias handling is required."
+            f"{groups_with_address_variants} party groups contain multiple address variants."
         )
-    if near_address_variants:
+    for group in groups:
+        seen_addresses = set()
+        duplicate_found = False
+        for address in group.addresses:
+            key = (
+                address.address_line_one.lower(),
+                address.address_line_two.lower(),
+                address.city.lower(),
+                address.postal_code.lower(),
+            )
+            if key in seen_addresses:
+                duplicate_found = True
+                break
+            seen_addresses.add(key)
+        if duplicate_found:
+            exact_duplicate_groups += 1
+    if exact_duplicate_groups:
         quality_issues.append(
-            f"{near_address_variants} record(s) use abbreviated address tokens, which can mask duplicates without expansion."
+            f"{exact_duplicate_groups} party groups already contain exact duplicate address variants."
         )
 
-    record_count = len(records)
-    duplicate_rate = round((duplicate_pairs * 2 / record_count) * 100, 2) if record_count else 0.0
+    duplicate_rate = round((exact_duplicate_groups / len(groups)) * 100, 2) if groups else 0.0
     return ProfileReport(
-        record_count=record_count,
-        fields=fields,
-        language_distribution=dict(language_distribution),
-        company_language_distribution=dict(company_language_distribution),
-        address_language_distribution=dict(address_language_distribution),
+        party_count=len(groups),
+        table_row_counts=table_row_counts,
+        schema_fields=schema_fields,
+        name_variant_distribution=dict(name_variant_distribution),
+        phone_variant_distribution=dict(phone_variant_distribution),
+        address_variant_distribution=dict(address_variant_distribution),
         duplicate_rate=duplicate_rate,
-        exact_duplicate_pairs=duplicate_pairs,
-        missing_value_counts=missing_value_counts,
+        exact_duplicate_groups=exact_duplicate_groups,
         quality_issues=quality_issues,
     )
 
@@ -117,23 +105,23 @@ Dataset: `{dataset_path}`
 
 ## Summary
 
-- Record count: {report.record_count}
-- Current exact duplicate pairs after normalization: {report.exact_duplicate_pairs}
-- Approximate duplicate rate: {report.duplicate_rate}%
+- Party count: {report.party_count}
+- Current exact duplicate groups by address variants: {report.exact_duplicate_groups}
+- Approximate duplicate-group rate: {report.duplicate_rate}%
+
+## Table row counts
+
+- {report.table_row_counts}
 
 ## Schema
 
-- Fields: {", ".join(report.fields)}
+- {report.schema_fields}
 
-## Language distribution
+## Variant distribution by party
 
-- Record-level: {report.language_distribution}
-- Company field: {report.company_language_distribution}
-- Address field: {report.address_language_distribution}
-
-## Missing values
-
-- {report.missing_value_counts}
+- Name variants per party: {report.name_variant_distribution}
+- Phone variants per party: {report.phone_variant_distribution}
+- Address variants per party: {report.address_variant_distribution}
 
 ## Known quality issues
 
@@ -143,14 +131,13 @@ Dataset: `{dataset_path}`
 
 def main() -> None:
     settings = load_settings(PROJECT_ROOT)
-    parser = argparse.ArgumentParser(description="Profile an MDM CSV dataset.")
-    parser.add_argument("--input", type=Path, default=settings.input_path)
+    parser = argparse.ArgumentParser(description="Profile the 5-table MDM dataset.")
+    parser.add_argument("--input-dir", type=Path, default=settings.mdm_data_dir)
     parser.add_argument("--output", type=Path, default=settings.profile_output_path)
     args = parser.parse_args()
 
-    records = load_records(args.input)
-    report = build_profile(records)
-    rendered = render_markdown(report, args.input)
+    report = build_profile(args.input_dir)
+    rendered = render_markdown(report, args.input_dir)
     args.output.write_text(rendered, encoding="utf-8")
     print(rendered)
 

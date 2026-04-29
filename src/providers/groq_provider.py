@@ -117,3 +117,20 @@ class GroqProvider:
             "score": int(parsed.get("score", 0)),
             "reason": parsed.get("reason", ""),
         }
+
+    def score_individual_name_against_party_name_structured(self, individual_name: str, party_name: str) -> dict:
+        response = self._single_turn(
+            model=self.config.reasoning_model,
+            system_prompt=(
+                "You compare personal name variants for enterprise MDM golden-record selection. "
+                "Return strict JSON only with keys: score, reason. "
+                "The score must be an integer from 0 to 100. "
+                "Higher scores mean the individual's name better matches the party master name."
+            ),
+            user_prompt=f"Individual variant: {individual_name}\nParty name: {party_name}",
+        )
+        parsed = json.loads(response)
+        return {
+            "score": int(parsed.get("score", 0)),
+            "reason": parsed.get("reason", ""),
+        }

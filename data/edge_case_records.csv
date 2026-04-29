@@ -1,7 +1,0 @@
-record_id,company_name,address,city,country,alternate_name
-11,IBM,1 New Orchard Rd,Armonk,USA,International Business Machines
-12,International Business Machines,1 New Orchard Road,Armonk,USA,IBM
-13,ABC Holdings,12 King Street,London,UK,
-14,ABC Trading,12 King Street,London,UK,
-15,TechnoLogía Global,88 Avenida Reforma,Mexico City,Mexico,Global Technology
-16,Global Technology,88 Avenida Reforma,Mexico City,Mexico,TechnoLogia Global

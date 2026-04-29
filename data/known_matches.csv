@@ -1,5 +1,0 @@
-left_record_id,right_record_id,expected_classification,notes
-1,2,High Confidence Match,Abbreviation and street expansion should collapse to an exact match
-3,4,High Confidence Match,Spanish company name should map to the English equivalent
-5,6,High Confidence Match,Manufacturing abbreviation expansion should collapse to an exact match
-9,10,High Confidence Match,French company synonym pair with shared address

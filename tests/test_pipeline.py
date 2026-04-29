@@ -1,9 +1,12 @@
-"""Unit tests for the Week 1 MDM pipeline."""
+"""Unit tests for preprocessing and MDM golden-record helpers."""
 
+from pathlib import Path
 import unittest
 
 from src.config import THRESHOLDS
 from src.embedding import generate_candidate_pairs
+from src.golden_record import assemble_golden_records
+from src.mdm_loader import load_party_groups
 from src.matcher import classify, evaluate_candidate
 from src.profiling import build_profile
 from src.preprocessing import RawRecord, normalize_text, preprocess_record
@@ -28,15 +31,24 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(processed.address_language, "possible_non_english")
 
     def test_profile_report_captures_duplicate_rate(self) -> None:
-        records = [
-            RawRecord("1", "ABC Co.", "12 King St.", "London", "UK", "ABC Company"),
-            RawRecord("2", "ABC Company", "12 King Street", "London", "UK", ""),
-            RawRecord("3", "Unique Corp", "9 Market Rd", "Leeds", "UK", ""),
-        ]
-        report = build_profile(records)
-        self.assertEqual(report.record_count, 3)
-        self.assertEqual(report.exact_duplicate_pairs, 1)
+        report = build_profile(Path("MDM- Match and Merge data"))
+        self.assertEqual(report.party_count, 100)
+        self.assertGreater(report.table_row_counts["individual"], 0)
         self.assertGreater(report.duplicate_rate, 0)
+
+    def test_load_party_groups_reads_real_schema(self) -> None:
+        groups = load_party_groups(Path("MDM- Match and Merge data"))
+        self.assertEqual(len(groups), 100)
+        self.assertTrue(all(group.party.party_id for group in groups))
+        self.assertTrue(any(len(group.individuals) > 1 for group in groups))
+
+    def test_golden_record_assembly_returns_best_ids(self) -> None:
+        groups = load_party_groups(Path("MDM- Match and Merge data"))
+        golden_records = assemble_golden_records(groups[:2])
+        self.assertEqual(len(golden_records), 2)
+        self.assertTrue(golden_records[0].best_individual_id)
+        self.assertTrue(golden_records[0].best_phone_id)
+        self.assertTrue(golden_records[0].best_address_id)
 
     def test_candidate_generation_finds_obvious_duplicate(self) -> None:
         records = [

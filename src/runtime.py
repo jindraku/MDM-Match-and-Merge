@@ -9,18 +9,18 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class RuntimeSettings:
-    input_path: Path
-    candidate_similarity: float
+    mdm_data_dir: Path
     profile_output_path: Path
+    golden_record_output_path: Path
     enable_llm_translation: bool
     enable_llm_abbreviation_expansion: bool
     groq_api_key: str
     groq_translation_model: str
     groq_reasoning_model: str
     groq_abbreviation_model: str
-    google_maps_api_key: str
-    google_geocoding_base_url: str
-    google_address_validation_base_url: str
+    azure_maps_api_key: str
+    azure_maps_geocoding_base_url: str
+    azure_maps_api_version: str
 
 
 def _as_bool(value: str, default: bool = False) -> bool:
@@ -45,9 +45,12 @@ def load_env_file(project_root: Path) -> None:
 def load_settings(project_root: Path) -> RuntimeSettings:
     load_env_file(project_root)
     return RuntimeSettings(
-        input_path=project_root / os.getenv("MDM_INPUT_PATH", "data/sample_records.csv"),
-        candidate_similarity=float(os.getenv("MDM_CANDIDATE_SIMILARITY", "0.30")),
+        mdm_data_dir=project_root / os.getenv("MDM_DATA_DIR", "MDM- Match and Merge data"),
         profile_output_path=project_root / os.getenv("MDM_PROFILE_OUTPUT_PATH", "docs/data_profile.md"),
+        golden_record_output_path=project_root / os.getenv(
+            "MDM_GOLDEN_RECORD_OUTPUT_PATH",
+            "outputs/golden_records.csv",
+        ),
         enable_llm_translation=_as_bool(os.getenv("MDM_ENABLE_LLM_TRANSLATION"), default=False),
         enable_llm_abbreviation_expansion=_as_bool(
             os.getenv("MDM_ENABLE_LLM_ABBREVIATION_EXPANSION"),
@@ -57,29 +60,26 @@ def load_settings(project_root: Path) -> RuntimeSettings:
         groq_translation_model=os.getenv("GROQ_TRANSLATION_MODEL", "llama-3.3-70b-versatile"),
         groq_reasoning_model=os.getenv("GROQ_REASONING_MODEL", "llama-3.3-70b-versatile"),
         groq_abbreviation_model=os.getenv("GROQ_ABBREVIATION_MODEL", "llama-3.3-70b-versatile"),
-        google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY", ""),
-        google_geocoding_base_url=os.getenv(
-            "GOOGLE_GEOCODING_BASE_URL",
-            "https://maps.googleapis.com/maps/api/geocode/json",
+        azure_maps_api_key=os.getenv("AZURE_MAPS_API_KEY", ""),
+        azure_maps_geocoding_base_url=os.getenv(
+            "AZURE_MAPS_GEOCODING_BASE_URL",
+            "https://atlas.microsoft.com/geocode",
         ),
-        google_address_validation_base_url=os.getenv(
-            "GOOGLE_ADDRESS_VALIDATION_BASE_URL",
-            "https://addressvalidation.googleapis.com/v1:validateAddress",
-        ),
+        azure_maps_api_version=os.getenv("AZURE_MAPS_API_VERSION", "2025-01-01"),
     )
 
 
 DEFAULT_RUNTIME_SETTINGS = RuntimeSettings(
-    input_path=Path("data/sample_records.csv"),
-    candidate_similarity=0.30,
+    mdm_data_dir=Path("MDM- Match and Merge data"),
     profile_output_path=Path("docs/data_profile.md"),
+    golden_record_output_path=Path("outputs/golden_records.csv"),
     enable_llm_translation=False,
     enable_llm_abbreviation_expansion=False,
     groq_api_key="",
     groq_translation_model="llama-3.3-70b-versatile",
     groq_reasoning_model="llama-3.3-70b-versatile",
     groq_abbreviation_model="llama-3.3-70b-versatile",
-    google_maps_api_key="",
-    google_geocoding_base_url="https://maps.googleapis.com/maps/api/geocode/json",
-    google_address_validation_base_url="https://addressvalidation.googleapis.com/v1:validateAddress",
+    azure_maps_api_key="",
+    azure_maps_geocoding_base_url="https://atlas.microsoft.com/geocode",
+    azure_maps_api_version="2025-01-01",
 )
