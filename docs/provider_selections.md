@@ -21,19 +21,17 @@ Official sources:
 - Groq model docs for `llama-3.3-70b-versatile`: https://console.groq.com/docs/model/llama-3.3-70b-versatile
 
 ### Geo and address provider
-- Selected provider: Google Maps Platform
-- Geo-distance API: Geocoding API
-- Postal normalization and address quality API: Address Validation API
+- Selected provider: Azure Maps
+- Geo-distance and address quality API: Azure Maps geocoding/search endpoint
 
 Rationale:
-- The Geocoding API converts addresses into latitude/longitude needed for Level 2 geo-distance checks.
-- The Address Validation API returns validation details, geocoding, and metadata, which is useful for future address parsing and normalization improvements in Level 4.
-- Google Maps Platform has mature documentation, predictable HTTP interfaces, and straightforward key-based authentication for a Week 1 integration path.
+- The Azure Maps geocoding response provides coordinates and confidence-style metadata that fit both Level 2 geo checks and address-quality ranking.
+- The current project requirements explicitly call for Azure Maps in the address scorer.
+- The integration path is straightforward for future production hardening once keys are available.
 
 Official sources:
-- Geocoding API overview: https://developers.google.com/maps/documentation/geocoding/overview
-- Geocoding requests and response format: https://developers.google.com/maps/documentation/geocoding/requests-geocoding
-- Address Validation API: https://developers.google.com/maps/documentation/address-validation/reference/rest/v1/TopLevel/validateAddress
+- Azure Maps Search best practices: https://learn.microsoft.com/en-us/azure/azure-maps/how-to-use-best-practices-for-search
+- Azure Maps Get Geocoding: https://learn.microsoft.com/en-us/rest/api/maps/search/get-geocoding
 
 ### Similarity infrastructure
 - Week 1 implementation choice: scikit-learn TF-IDF + cosine similarity
@@ -53,7 +51,7 @@ Official sources:
 | Translation and reasoning | Groq SDK + `llama-3.3-70b-versatile` | Low-latency general-purpose instruction model for matching subtasks |
 | Ambiguous-case review | `llama-3.3-70b-versatile` | Reused for semantic name equivalence in the starter |
 | Multilingual embeddings | TF-IDF in Week 1, with FAISS-ready scale path | Keeps the starter local and reproducible |
-| Geo-distance | Google Geocoding API | Produces lat/long for Level 2 |
-| Address validation | Google Address Validation API | Supports future postal normalization and metadata |
+| Geo-distance | Azure Maps geocoding | Produces lat/long for Level 2 |
+| Address quality | Azure Maps geocoding/search | Supports ranking and future normalization work |
 | Week 1 local similarity | TF-IDF | Simple, reproducible baseline |
 | Future production vector search | FAISS | Scalable ANN path |

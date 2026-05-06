@@ -58,10 +58,29 @@
   "final_score": 93,
   "classification": "High Confidence Match",
   "exact_match": true,
+  "name_status": "exact_business_match",
+  "geo_status": "near_same_location",
+  "address_status": "same_address",
   "reasoning": [
-    "Level 1 exact match succeeded on normalized company name and address.",
-    "Embedding similarity contributed 31.9/35 points."
+    "Level 1 exact match contribution: 15/15.",
+    "Embedding similarity contribution: 9.1/10.",
+    "Level 3 name verification contribution: 40/40."
   ]
+}
+```
+
+### Golden record output
+
+```json
+{
+  "party_id": "123",
+  "party_name": "ABC Company",
+  "best_individual_id": "123-IND-1",
+  "best_phone_id": "999",
+  "best_address_id": "123-ADDR-1",
+  "individual_reasoning": "Normalized individual name exactly matches PARTY_NAME.",
+  "phone_reasoning": "Phone parses to a valid number.",
+  "address_reasoning": "Address line one is present."
 }
 ```
 
@@ -72,7 +91,7 @@
 - Output: translated text, explanation, or semantic equivalence decision
 - Planned use: Levels 3 and 5
 
-### Google geocoding request
+### Azure Maps geocoding request
 - Input: full normalized address string
 - Output: latitude, longitude, formatted address, place ID
 - Planned use: Level 2 geo-distance scoring

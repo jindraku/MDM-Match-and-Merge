@@ -12,6 +12,9 @@ class RuntimeSettings:
     mdm_data_dir: Path
     profile_output_path: Path
     golden_record_output_path: Path
+    match_output_path: Path
+    validation_output_path: Path
+    calibration_output_path: Path
     enable_llm_translation: bool
     enable_llm_abbreviation_expansion: bool
     groq_api_key: str
@@ -51,6 +54,18 @@ def load_settings(project_root: Path) -> RuntimeSettings:
             "MDM_GOLDEN_RECORD_OUTPUT_PATH",
             "outputs/golden_records.csv",
         ),
+        match_output_path=project_root / os.getenv(
+            "MDM_MATCH_OUTPUT_PATH",
+            "outputs/match_results.csv",
+        ),
+        validation_output_path=project_root / os.getenv(
+            "MDM_VALIDATION_OUTPUT_PATH",
+            "docs/validation_results.md",
+        ),
+        calibration_output_path=project_root / os.getenv(
+            "MDM_CALIBRATION_OUTPUT_PATH",
+            "docs/calibration_report.md",
+        ),
         enable_llm_translation=_as_bool(os.getenv("MDM_ENABLE_LLM_TRANSLATION"), default=False),
         enable_llm_abbreviation_expansion=_as_bool(
             os.getenv("MDM_ENABLE_LLM_ABBREVIATION_EXPANSION"),
@@ -73,6 +88,9 @@ DEFAULT_RUNTIME_SETTINGS = RuntimeSettings(
     mdm_data_dir=Path("MDM- Match and Merge data"),
     profile_output_path=Path("docs/data_profile.md"),
     golden_record_output_path=Path("outputs/golden_records.csv"),
+    match_output_path=Path("outputs/match_results.csv"),
+    validation_output_path=Path("docs/validation_results.md"),
+    calibration_output_path=Path("docs/calibration_report.md"),
     enable_llm_translation=False,
     enable_llm_abbreviation_expansion=False,
     groq_api_key="",

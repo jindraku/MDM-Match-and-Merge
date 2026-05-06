@@ -52,3 +52,29 @@ class AzureMapsProvider:
         request = Request(f"{self.config.geocoding_base_url}?{urlencode(params)}")
         with urlopen(request) as response:
             return json.loads(response.read().decode("utf-8"))
+
+    def geocode_to_lat_lng(self, address: str) -> tuple[float, float] | None:
+        try:
+            response = self.geocode_address(query=address)
+        except Exception:
+            return None
+
+        if "features" in response:
+            features = response.get("features", [])
+            if not features:
+                return None
+            coordinates = features[0].get("geometry", {}).get("coordinates", [])
+            if len(coordinates) < 2:
+                return None
+            longitude, latitude = coordinates[0], coordinates[1]
+            return float(latitude), float(longitude)
+
+        results = response.get("results", [])
+        if not results:
+            return None
+        position = results[0].get("position", {})
+        lat = position.get("lat")
+        lon = position.get("lon")
+        if lat is None or lon is None:
+            return None
+        return float(lat), float(lon)

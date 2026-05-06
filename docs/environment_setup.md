@@ -15,9 +15,9 @@ make run
 ## Environment variables
 
 `.env.example` includes:
-- dataset path and candidate threshold
+- dataset path and output paths
 - Groq model, feature flags, and API key placeholders
-- Google Maps API key placeholders
+- Azure Maps API key placeholders
 
 ## Provisioned assets included in this repository
 

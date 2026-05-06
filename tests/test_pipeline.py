@@ -6,10 +6,12 @@ import unittest
 from src.config import THRESHOLDS
 from src.embedding import generate_candidate_pairs
 from src.golden_record import assemble_golden_records
+from src.match_pipeline import run_end_to_end_match_pipeline
 from src.mdm_loader import load_party_groups
 from src.matcher import classify, evaluate_candidate
 from src.profiling import build_profile
 from src.preprocessing import RawRecord, normalize_text, preprocess_record
+from src.runtime import DEFAULT_RUNTIME_SETTINGS
 
 
 class PipelineTests(unittest.TestCase):
@@ -49,6 +51,17 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(golden_records[0].best_individual_id)
         self.assertTrue(golden_records[0].best_phone_id)
         self.assertTrue(golden_records[0].best_address_id)
+
+    def test_end_to_end_match_pipeline_returns_scored_results(self) -> None:
+        groups = load_party_groups(Path("MDM- Match and Merge data"))
+        output = run_end_to_end_match_pipeline(groups, settings=DEFAULT_RUNTIME_SETTINGS)
+        self.assertEqual(len(output.golden_records), len(groups))
+        self.assertGreater(len(output.match_results), 0)
+        self.assertIn(
+            output.match_results[0].classification,
+            {"High Confidence Match", "Potential Match", "Non-Match"},
+        )
+        self.assertTrue(output.match_results[0].reasoning)
 
     def test_candidate_generation_finds_obvious_duplicate(self) -> None:
         records = [

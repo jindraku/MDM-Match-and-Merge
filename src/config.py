@@ -12,6 +12,7 @@ class Thresholds:
     potential_match: int = 60
     near_distance_miles: float = 2.0
     far_distance_miles: float = 25.0
+    validation_name_similarity: float = 0.90
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,13 @@ class ScoringWeights:
     geo_distance: int = 10
     name_verification: int = 40
     address_analysis: int = 25
+
+    # Week 3
+    final_exact_match: int = 15
+    final_embedding_similarity: int = 10
+    penalty_name_conflict: int = 30
+    penalty_address_conflict: int = 20
+    penalty_different_office: int = 10
 
 
 @dataclass(frozen=True)

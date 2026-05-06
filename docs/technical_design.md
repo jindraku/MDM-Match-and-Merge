@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The MDM Match and Merge Engine is designed to identify duplicate Customer Master records using a multi-stage pipeline. The system processes multilingual, inconsistent data and applies a combination of preprocessing, embedding-based filtering, and multi-agent reasoning to evaluate candidate record pairs.
+The MDM Match and Merge Engine identifies duplicate Customer Master records using a multi-stage pipeline over the real five-table MDM schema. The system first assembles a golden record per `PARTY_ID`, then preprocesses those canonical records, generates candidate pairs, evaluates Levels 1–4, and computes a final Level 5 confidence score with classification and reasoning.
 
 The design follows a modular and scalable architecture to support future extensions across multiple master data domains.
 
@@ -13,16 +13,19 @@ The design follows a modular and scalable architecture to support future extensi
 The system is structured as a pipeline:
 
 ```
-Raw Data → Preprocessing → Embedding Generation → Candidate Selection → Multi-Agent Matching → Output
+Raw MDM Tables → Golden Record Assembly → Preprocessing → Embedding Generation → Candidate Selection → Multi-Agent Matching → Level 5 Score Aggregation → Output
 ```
 
 ### Components
 
-* **Preprocessing Module** – cleans and normalizes input data
+* **MDM Loader** – joins the five-table schema and groups records by `PARTY_ID`
+* **Golden Record Assembly** – ranks name, phone, and address variants
+* **Preprocessing Module** – cleans and normalizes canonical records
 * **Embedding Module** – generates similarity vectors
 * **Candidate Generator** – filters record pairs
-* **Multi-Agent Matching Engine (Week 2)** – evaluates candidate pairs
-* **Output Layer** – produces structured reasoning
+* **Multi-Agent Matching Engine** – evaluates candidate pairs through Levels 1–4
+* **Level 5 Aggregator** – computes final score and classification
+* **Output Layer** – produces match results, reasoning, validation, and calibration artifacts
 
 ---
 
@@ -67,7 +70,7 @@ Reduce O(N²) comparisons to a manageable subset of candidate pairs.
 
 ---
 
-## 5. Multi-Agent Matching Engine (Week 2)
+## 5. Multi-Agent Matching Engine
 
 The matching engine introduces three agents to evaluate candidate pairs beyond exact matching.
 
@@ -94,7 +97,9 @@ The agents operate sequentially:
 3. Execute Company Name Verification Agent
 4. Execute Geo Distance Agent
 5. Execute Address Deep Analysis Agent
-6. Aggregate outputs into structured reasoning
+6. Aggregate outputs into a 0–100 final score
+7. Apply classification thresholds
+8. Emit structured reasoning
 
 ---
 
@@ -106,7 +111,7 @@ Determine physical proximity between two records.
 
 ### Implementation
 
-* Uses Google Maps Geocoding API
+* Uses Azure Maps geocoding when available
 * Converts addresses to latitude/longitude
 * Computes distance using Haversine formula
 
@@ -192,20 +197,42 @@ reason: Addresses match after normalization
 
 ---
 
-## 10. Data Flow
+## 10. Level 5 Final Scoring
+
+The final scorer combines:
+
+* Level 1 exact match
+* embedding similarity
+* Level 2 geo distance
+* Level 3 name verification
+* Level 4 address analysis
+
+Current thresholds:
+
+* High Confidence Match: `>85`
+* Potential Match: `60–85`
+* Non-Match: `<60`
+
+The pipeline also applies penalties for:
+
+* name conflict
+* address conflict
+* same company but different office
+
+## 11. Data Flow
 
 ```
-Raw Records  
+Raw MDM Tables  
+→ Golden Record Assembly
 → Preprocessing  
 → Embedding Generation  
 → Candidate Selection  
 → Multi-Agent Matching  
-→ Agent Outputs + Reasoning  
+→ Level 5 Final Score  
+→ Classification + Reasoning  
 ```
 
----
-
-## 11. Output Format (Week 2)
+## 12. Output Format
 
 For each candidate pair:
 
@@ -216,11 +243,11 @@ For each candidate pair:
 * name agent result
 * geo agent result
 * address agent result
+* final score
+* classification
 * reasoning log
 
----
-
-## 12. Example Output
+## 13. Example Output
 
 ```
 A101 vs B442
@@ -229,6 +256,8 @@ Similarity: 0.91
 Name: exact_business_match
 Geo: near_same_location
 Address: same_address
+Final score: 93
+Classification: High Confidence Match
 
 Reasoning:
 - Names refer to same entity
@@ -236,41 +265,35 @@ Reasoning:
 - Address components match after normalization
 ```
 
----
+## 14. Validation and Calibration
 
-## 13. Limitations
+The repository now generates:
+
+* `docs/validation_results.md`
+* `docs/calibration_report.md`
+
+These artifacts document:
+
+* expected vs actual classifications on heuristic validation cases
+* candidate-threshold sweep results
+* selected threshold values `p`, `x`, and `y`
+* next-step recommendations for stakeholder review
+
+## 15. Limitations
 
 * Geo API requires valid and complete addresses
 * LLM responses may vary slightly
-* No final confidence scoring (Week 3)
+* Validation currently uses heuristic cases rather than stakeholder-approved truth labels
 * Parent-subsidiary logic depends on LLM interpretation
 
----
-
-## 14. Future Work (Week 3)
-
-* Final confidence score computation (0–100)
-* Classification:
-
-  * High Confidence Match
-  * Potential Match
-  * Non-Match
-* Business rule enforcement
-* Merge decision logic
-* Performance optimization (FAISS / vector DB)
-
----
-
-## 15. Technology Stack
+## 16. Technology Stack
 
 * Python
 * Groq (LLM provider)
-* Google Maps API
+* Azure Maps
 * TF-IDF embeddings
 * Cosine similarity
 
----
+## 17. Summary
 
-## 16. Summary
-
-The Week 2 design introduces a multi-agent architecture that enhances traditional matching by incorporating semantic reasoning and spatial validation. This approach improves matching accuracy and provides explainable results for enterprise MDM systems.
+The current POC provides scoring, classification, reasoning, validation, and calibration over the real MDM schema. It is ready for the next step of stakeholder walkthrough and truth-label-based threshold tuning.
